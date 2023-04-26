@@ -4,6 +4,7 @@ dotenv.config();
 import cors from 'cors';
 import { AggregatorProxy } from './aggregators/AggregatorProxy';
 import { OneInchPathfinderAggregator } from './aggregators/OneInchPathfinderAggregator';
+import { KyberAggregator } from './aggregators/KyberAggregator';
 
 const port = process.env.PORT;
 
@@ -85,16 +86,23 @@ app.get('/api/getamountoutmulti', async (req: Request, res: Response) => {
       amountIn.toString()
     );
 
-    const oneInchResp = oneInchAggregator.GetAmountOut(
+    const oneInchResp = new OneInchPathfinderAggregator().GetAmountOut(
       network.toString(),
       tokenInAddress.toString(),
       tokenOutAddress.toString(),
       amountIn.toString()
     );
 
-    await Promise.all([openOceanResponse, oneInchResp]);
+    const kyberResp = new KyberAggregator().GetAmountOut(
+      network.toString(),
+      tokenInAddress.toString(),
+      tokenOutAddress.toString(),
+      amountIn.toString()
+    );
 
-    res.json({ openOcean: await openOceanResponse, '1inch': await oneInchResp });
+    await Promise.all([openOceanResponse, oneInchResp, kyberResp]);
+
+    res.json({ openOcean: await openOceanResponse, '1inch': await oneInchResp, kyber: await kyberResp });
   } catch (e) {
     console.log('exception', e);
     res.status(503).json({ error: 'something went wrong', exception: e });
