@@ -45,7 +45,11 @@ priceController.get('/', async (req: Request, res: Response) => {
           };
           break;
         }
-        default: {
+        case 'cro':
+        case 'near':
+        case 'bsc':
+        case 'matic':
+        case 'avax': {
           // call coingecko
           const coingeckoChainId = coinGeckoChainIdMap[networkKey];
           if (!coingeckoChainId) {
@@ -53,7 +57,7 @@ priceController.get('/', async (req: Request, res: Response) => {
             return;
           }
 
-          const price = await retry(GetPriceFromCoinGecko, [coingeckoChainId, tokenAddress.toString()], 10);
+          const price = await retry(GetPriceFromCoinGecko, [coingeckoChainId, tokenAddressKey], 10);
 
           priceResponse = {
             priceUSD: price,
@@ -61,6 +65,8 @@ priceController.get('/', async (req: Request, res: Response) => {
           };
           break;
         }
+        default:
+          throw new Error(`Unknown network ${network}`);
       }
 
       // only cache if price != 0
@@ -77,7 +83,7 @@ priceController.get('/', async (req: Request, res: Response) => {
 
       res.json(priceResponse);
     } else {
-      console.log(`Returning cache price for ${networkKey} / ${tokenAddressKey}`);
+      console.log(`Returning cache price for network ${networkKey} / ${tokenAddressKey}`);
       res.json(priceCache[networkKey][tokenAddressKey].priceResponse);
     }
   } catch (e) {
@@ -100,10 +106,10 @@ async function GetPriceFromKyber(tokenAddress: string): Promise<number> {
 async function GetPriceFromCoinGecko(coingeckoChainId: string, tokenAddress: string): Promise<number> {
   const coinGeckoApiCall = `https://api.coingecko.com/api/v3/simple/token_price/${coingeckoChainId}?contract_addresses=${tokenAddress}&vs_currencies=USD`;
   const coingeckoResponse = await axios.get(coinGeckoApiCall);
-  if (!coingeckoResponse.data[0].usd) {
+  if (Object.keys(coingeckoResponse.data).length == 0 || !coingeckoResponse.data[tokenAddress].usd) {
     console.log(`Could not find coingecko price for ${tokenAddress}`);
     return 0;
   } else {
-    return Number(coingeckoResponse.data[0].usd);
+    return Number(coingeckoResponse.data[tokenAddress].usd);
   }
 }
