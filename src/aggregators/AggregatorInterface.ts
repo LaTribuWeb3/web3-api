@@ -9,4 +9,5 @@ export abstract class AggregatorInterface {
 
 export interface GetAmountOutResponse {
   amountOut: string;
+  aggregator: string;
 }

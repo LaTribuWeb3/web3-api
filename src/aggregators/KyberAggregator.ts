@@ -25,7 +25,8 @@ export class KyberAggregator extends AggregatorInterface {
 
     const routeResponse = await axios.get(callUrl);
     return {
-      amountOut: routeResponse.data.data.routeSummary.amountOut.toString()
+      amountOut: routeResponse.data.data.routeSummary.amountOut.toString(),
+      aggregator: 'kyber'
     };
   }
 }

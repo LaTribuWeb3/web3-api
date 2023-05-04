@@ -18,7 +18,8 @@ export class OneInchPathfinderAggregator extends AggregatorInterface {
 
     const quoteResponse = await axios.get(callUrl);
     return {
-      amountOut: quoteResponse.data.bestResult.toTokenAmount.toString()
+      amountOut: quoteResponse.data.bestResult.toTokenAmount.toString(),
+      aggregator: '1inch'
     };
   }
 }

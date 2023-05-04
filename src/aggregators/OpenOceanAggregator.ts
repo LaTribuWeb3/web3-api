@@ -15,11 +15,12 @@ export class OpenOceanAggregator extends AggregatorInterface {
     const callUrl =
       `https://ethapi.openocean.finance/v2/${chainid}/swap?inTokenAddress=${tokenInAddress}` +
       `&outTokenAddress=${tokenOutAddress}&amount=${tokenInAmount}` +
-      `&gasPrice=${gasPrice}&account=0x0000000000000000000000000000000000000000`;
+      `&gasPrice=${gasPrice}&account=0x0000000000000000000000000000000000000000&disabledDexIds=26`;
 
     const swapResponse = await axios.get(callUrl);
     return {
-      amountOut: swapResponse.data.outAmount.toString()
+      amountOut: swapResponse.data.outAmount.toString(),
+      aggregator: 'openocean'
     };
   }
 }
