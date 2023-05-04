@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { BigNumber } from 'ethers';
 
 export function GetChainIdFromNetwork(network: string): number {
   switch (network.toLowerCase()) {
@@ -44,5 +43,5 @@ export async function GetGasPriceGWEI(network: string): Promise<number> {
 export async function GetGasPriceWei(network: string): Promise<number> {
   const gasPriceGwei = await GetGasPriceGWEI(network);
 
-  return BigNumber.from(gasPriceGwei).mul(BigNumber.from(10).pow(9)).toNumber();
+  return gasPriceGwei * 10 ** 9;
 }
