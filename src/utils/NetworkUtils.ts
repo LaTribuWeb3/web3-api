@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { retry } from './Utils';
 
 export function GetChainIdFromNetwork(network: string): number {
   switch (network.toLowerCase()) {
@@ -20,15 +21,20 @@ interface GasCachedValue {
   checkDate: number;
 }
 
+async function getGasFromOpenOcean(chainid: number): Promise<number> {
+  const url = `https://open-api.openocean.finance/v1/${chainid}/getGasPrice`;
+  const getGasPriceResponse = await axios.get(url);
+  return Number(getGasPriceResponse.data.data.gasPrice);
+}
+
 export async function GetGasPriceGWEI(network: string): Promise<number> {
   const cachedGasPriceForNetwork = gasPriceCache[network];
   if (!cachedGasPriceForNetwork || cachedGasPriceForNetwork.checkDate < Date.now() - 120 * 1000) {
     console.log(`GetGasPrice: getting gas price for network ${network}`);
     const chainId = GetChainIdFromNetwork(network);
-    const url = `https://open-api.openocean.finance/v1/${chainId}/getGasPrice`;
-    const getGasPriceResponse = await axios.get(url);
+    const gasPrice = await retry(getGasFromOpenOcean, [chainId], 3);
     gasPriceCache[network] = {
-      gasPriceGwei: getGasPriceResponse.data.data.gasPrice,
+      gasPriceGwei: gasPrice,
       checkDate: Date.now()
     };
 

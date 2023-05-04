@@ -1,23 +1,20 @@
-import express, { Express, Request, Response } from 'express';
+import express, { Express } from 'express';
 import dotenv from 'dotenv';
 dotenv.config();
 import cors from 'cors';
-import { AggregatorProxy } from './aggregators/AggregatorProxy';
-import { OneInchPathfinderAggregator } from './aggregators/OneInchPathfinderAggregator';
-import { KyberAggregator } from './aggregators/KyberAggregator';
-import { AggregatorInterface } from './aggregators/AggregatorInterface';
-import { OpenOceanAggregator } from './aggregators/OpenOceanAggregator';
-import { ZeroXAggregator } from './aggregators/ZeroXAggregator';
 import { aggregatorController } from './controllers/AggregatorController';
-const aggregatorProxy = new AggregatorProxy();
+import loggerMiddleware from './middlewares/LoggerMiddleware';
+import { priceController } from './controllers/PriceController';
 
 const port = process.env.PORT;
 
 const app: Express = express();
 
 app.use(cors());
+app.use(loggerMiddleware);
 
 app.use('/api/aggregator/', aggregatorController);
+app.use('/api/price/', priceController);
 
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
