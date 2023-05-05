@@ -38,7 +38,7 @@ priceController.get('/', async (req: Request, res: Response) => {
       let priceResponse: IPriceResponse | undefined = undefined;
       switch (networkKey) {
         case 'eth': {
-          const price = await retry(GetPriceFromKyber, [tokenAddressKey], 10);
+          const price = await retry(GetPriceFromKyber, [tokenAddressKey], 3);
           priceResponse = {
             priceUSD: price,
             source: 'kyberkrystal'
@@ -57,7 +57,7 @@ priceController.get('/', async (req: Request, res: Response) => {
             return;
           }
 
-          const price = await retry(GetPriceFromCoinGecko, [coingeckoChainId, tokenAddressKey], 10);
+          const price = await retry(GetPriceFromCoinGecko, [coingeckoChainId, tokenAddressKey], 3);
 
           priceResponse = {
             priceUSD: price,
