@@ -83,7 +83,7 @@ priceController.get('/', async (req: Request, res: Response) => {
 
       res.json(priceResponse);
     } else {
-      console.log(`Returning cache price for network ${networkKey} / ${tokenAddressKey}`);
+      console.log(`Returning cache price for network ${networkKey} and token ${tokenAddressKey}`);
       res.json(priceCache[networkKey][tokenAddressKey].priceResponse);
     }
   } catch (e) {
