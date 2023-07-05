@@ -111,3 +111,5 @@ dist
 nocommit/*
 
 data/
+
+src/contracts/types

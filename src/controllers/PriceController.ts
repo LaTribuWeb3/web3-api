@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { retry, sleep } from '../utils/Utils';
 import { IPriceCache, IPriceResponse, coinGeckoChainIdMap } from '../models/PriceModels';
 import axios from 'axios';
-import { Mutex, MutexInterface } from 'async-mutex';
+import { Mutex } from 'async-mutex';
 export const priceController = express.Router();
 const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 min price cache
 const WAIT_TIME_BETWEEN_CALLS = 6 * 1000; // 6 seconds between each calls
