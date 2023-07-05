@@ -1,5 +1,5 @@
 {
-    "name": "web3-price-api",
+    "name": "web3-api",
     "version": "1.0.0",
     "main": "Api.ts",
     "scripts": {

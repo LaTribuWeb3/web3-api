@@ -77,6 +77,7 @@ async function getCachedPrice(network: string, address: string, res: Response): 
         }
         // call kyber
         const price = await retry(GetPriceFromKyber, [address], 3);
+        console.log(`found price ${price} for address ${address} from kyber`);
         lastKyberCall = Date.now();
         priceResponse = {
           priceUSD: price,
@@ -127,7 +128,9 @@ async function getCachedPrice(network: string, address: string, res: Response): 
       };
     }
   } else {
-    console.log(`Returning cache price for network ${network} and token ${address}`);
+    console.log(
+      `Returning cached price for network ${network} and token ${address}: ${priceCache[network][address].priceResponse}`
+    );
   }
   return priceCache[network][address].priceResponse;
 }
