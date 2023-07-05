@@ -5,7 +5,8 @@ import axios from 'axios';
 import { Mutex } from 'async-mutex';
 export const priceController = express.Router();
 const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 min price cache
-const WAIT_TIME_BETWEEN_CALLS = 6 * 1000; // 6 seconds between each calls
+const WAIT_TIME_BETWEEN_CALLS_KYBER = 2 * 1000; // 2 seconds between each calls
+const WAIT_TIME_BETWEEN_CALLS_COINGECKO = 6 * 1000; // 6 seconds between each calls
 let lastCoingeckoCall = 0;
 let lastKyberCall = 0;
 
@@ -70,7 +71,7 @@ async function getCachedPrice(network: string, address: string, res: Response): 
 
     switch (network) {
       case 'eth': {
-        const msToWait = WAIT_TIME_BETWEEN_CALLS - (Date.now() - lastKyberCall);
+        const msToWait = WAIT_TIME_BETWEEN_CALLS_KYBER - (Date.now() - lastKyberCall);
         if (msToWait > 0) {
           console.log(`waiting ${msToWait} ms before calling kyber`);
           await sleep(msToWait);
@@ -91,7 +92,7 @@ async function getCachedPrice(network: string, address: string, res: Response): 
       case 'matic':
       case 'avax': {
         // call coingecko
-        const msToWait = WAIT_TIME_BETWEEN_CALLS - (Date.now() - lastCoingeckoCall);
+        const msToWait = WAIT_TIME_BETWEEN_CALLS_COINGECKO - (Date.now() - lastCoingeckoCall);
         if (msToWait > 0) {
           console.log(`waiting ${msToWait} ms before calling coingecko`);
           await sleep(msToWait);
