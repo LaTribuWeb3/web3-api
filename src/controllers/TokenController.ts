@@ -6,6 +6,14 @@ import path from 'path';
 import { ERC20__factory } from '../contracts/types';
 
 export const tokenController = express.Router();
+const web3ProviderMapping = {
+  eth: new ethers.JsonRpcProvider(process.env.RPC_URL_ETH),
+  avax: new ethers.JsonRpcProvider(process.env.RPC_URL_AVAX),
+  cro: new ethers.JsonRpcProvider(process.env.RPC_URL_CRONOS),
+  bsc: new ethers.JsonRpcProvider(process.env.RPC_URL_BSC),
+  matic: new ethers.JsonRpcProvider(process.env.RPC_URL_MATIC),
+  gnosis: new ethers.JsonRpcProvider(process.env.RPC_URL_GNOSIS)
+};
 
 interface NetworkInfoCache {
   [network: string]: TokenInfoCache;
@@ -47,11 +55,6 @@ function writeToDisk() {
 }
 
 setInterval(writeToDisk, 60 * 1000);
-
-const web3ProviderMapping = {
-  eth: new ethers.JsonRpcProvider(process.env.RPC_URL),
-  avax: new ethers.JsonRpcProvider(process.env.RPC_URL_AVAX)
-};
 
 tokenController.get('/infos', async (req: Request, res: Response) => {
   try {
@@ -121,6 +124,6 @@ tokenController.get('/infos', async (req: Request, res: Response) => {
     res.json(tokenInfosCache[networkKey][tokenAddressKey]);
   } catch (e) {
     console.error(e);
-    res.status(503).json({ msg: 'Something went wrong' });
+    res.status(503).json({ msg: `Something went wrong when querying for ${Object.entries(req.query)}` });
   }
 });

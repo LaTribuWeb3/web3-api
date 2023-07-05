@@ -8,10 +8,10 @@ dotenv.config();
 
 export const blockController = express.Router();
 
-const RPC_URL = process.env.RPC_URL;
+const RPC_URL = process.env.RPC_URL_ETH;
 
 if (!RPC_URL) {
-  throw new Error('Cannot find "RPC_URL" env variable');
+  throw new Error('Cannot find "RPC_URL_ETH" env variable');
 }
 
 const web3Provider = new ethers.JsonRpcProvider(RPC_URL, 1);
