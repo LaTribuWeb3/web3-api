@@ -16,7 +16,7 @@ app.use(loggerMiddleware);
 
 app.use('/api/aggregator/', aggregatorController);
 app.use('/api/price/', priceController);
-app.use('/api/', blockController);
+app.use('/api/getblocktimestamp/', blockController);
 
 app.listen(port, () => {
   console.log(`⚡️[server]: Server is running at http://localhost:${port}`);

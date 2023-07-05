@@ -42,7 +42,7 @@ function writeToDisk() {
 
 setInterval(writeToDisk, 60 * 1000);
 
-blockController.get('/getblocktimestamp', async (req: Request, res: Response) => {
+blockController.get('/', async (req: Request, res: Response) => {
   const blocknumber = Number(req.query.blocknumber);
   if (!blocknumber) {
     res.status(400).json({ error: 'blocknumber query param mandatory' });
