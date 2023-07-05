@@ -5,12 +5,11 @@ import axios from 'axios';
 import { Mutex, MutexInterface } from 'async-mutex';
 export const priceController = express.Router();
 const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 min price cache
-const WAIT_TIME_BETWEEN_CALLS = 3 * 1000; // 3 seconds between each calls
+const WAIT_TIME_BETWEEN_CALLS = 6 * 1000; // 6 seconds between each calls
 let lastCoingeckoCall = 0;
 let lastKyberCall = 0;
 
-const coingeckoMutex = new Mutex();
-const kyberMutex = new Mutex();
+const getPriceMutex = new Mutex();
 
 const priceCache: IPriceCache = {};
 
@@ -36,93 +35,102 @@ priceController.get('/', async (req: Request, res: Response) => {
     const networkKey = network.toString().toLowerCase();
     const tokenAddressKey = tokenAddress.toString().toLowerCase();
 
-    if (
-      !priceCache[networkKey] ||
-      !priceCache[networkKey][tokenAddressKey] ||
-      priceCache[networkKey][tokenAddressKey].cacheDate < Date.now() - PRICE_CACHE_DURATION
-    ) {
-      console.log(`Price for ${tokenAddressKey} not found in cache for network ${networkKey}`);
-      let priceResponse: IPriceResponse | undefined = undefined;
-
-      switch (networkKey) {
-        case 'eth': {
-          priceResponse = await kyberMutex.runExclusive(async () => {
-            const msToWait = WAIT_TIME_BETWEEN_CALLS - (Date.now() - lastKyberCall);
-            if (msToWait > 0) {
-              console.log(`waiting ${msToWait} ms before calling kyber`);
-              await sleep(msToWait);
-            }
-            // call kyber
-            const price = await retry(GetPriceFromKyber, [tokenAddressKey], 3);
-            lastKyberCall = Date.now();
-            priceResponse = {
-              priceUSD: price,
-              source: 'kyberkrystal'
-            };
-            return priceResponse;
-          });
-          break;
-        }
-        case 'cro':
-        case 'near':
-        case 'bsc':
-        case 'matic':
-        case 'avax': {
-          priceResponse = await coingeckoMutex.runExclusive(async () => {
-            // call coingecko
-            const msToWait = WAIT_TIME_BETWEEN_CALLS - (Date.now() - lastCoingeckoCall);
-            if (msToWait > 0) {
-              console.log(`waiting ${msToWait} ms before calling coingecko`);
-              await sleep(msToWait);
-            }
-            const coingeckoChainId = coinGeckoChainIdMap[networkKey];
-            if (!coingeckoChainId) {
-              res.status(400).json({ error: 'amountIn query param mandatory' });
-              return;
-            }
-
-            const price = await retry(GetPriceFromCoinGecko, [coingeckoChainId, tokenAddressKey], 3);
-
-            lastCoingeckoCall = Date.now();
-            priceResponse = {
-              priceUSD: price,
-              source: 'coingecko'
-            };
-            return priceResponse;
-          });
-          break;
-        }
-        default:
-          throw new Error(`Unknown network ${network}`);
+    const price = await getPriceMutex.runExclusive(async () => {
+      if (req.closed) {
+        return;
       }
+      return await getCachedPrice(networkKey, tokenAddressKey, res);
+    });
 
-      if (!priceResponse) {
-        throw new Error('Unknown price error');
-      }
-
-      // only cache if price != 0
-      if (priceResponse.priceUSD != 0) {
-        if (!priceCache[networkKey]) {
-          priceCache[networkKey] = {};
-        }
-
-        priceCache[networkKey][tokenAddressKey] = {
-          cacheDate: Date.now(),
-          priceResponse: priceResponse
-        };
-      }
-
-      res.json(priceResponse);
-    } else {
-      console.log(`Returning cache price for network ${networkKey} and token ${tokenAddressKey}`);
-      res.json(priceCache[networkKey][tokenAddressKey].priceResponse);
+    if (req.closed) {
+      console.log('ending request because closed');
+      res.json({ msg: 'request closed' });
+      return;
     }
+
+    if (!price) {
+      throw new Error('Unknown price error');
+    }
+
+    res.json(price);
   } catch (e) {
     console.log('exception', e);
     res.status(503).json({ error: 'something went wrong', exception: e });
   }
-
 });
+
+async function getCachedPrice(network: string, address: string, res: Response): Promise<IPriceResponse | undefined> {
+  if (
+    !priceCache[network] ||
+    !priceCache[network][address] ||
+    priceCache[network][address].cacheDate < Date.now() - PRICE_CACHE_DURATION
+  ) {
+    console.log(`Price for ${address} not found in cache for network ${network}`);
+    let priceResponse: IPriceResponse | undefined = undefined;
+
+    switch (network) {
+      case 'eth': {
+        const msToWait = WAIT_TIME_BETWEEN_CALLS - (Date.now() - lastKyberCall);
+        if (msToWait > 0) {
+          console.log(`waiting ${msToWait} ms before calling kyber`);
+          await sleep(msToWait);
+        }
+        // call kyber
+        const price = await retry(GetPriceFromKyber, [address], 3);
+        lastKyberCall = Date.now();
+        priceResponse = {
+          priceUSD: price,
+          source: 'kyberkrystal'
+        };
+        break;
+      }
+      case 'cro':
+      case 'near':
+      case 'bsc':
+      case 'matic':
+      case 'avax': {
+        // call coingecko
+        const msToWait = WAIT_TIME_BETWEEN_CALLS - (Date.now() - lastCoingeckoCall);
+        if (msToWait > 0) {
+          console.log(`waiting ${msToWait} ms before calling coingecko`);
+          await sleep(msToWait);
+        }
+        const coingeckoChainId = coinGeckoChainIdMap[network];
+        if (!coingeckoChainId) {
+          res.status(400).json({ error: 'amountIn query param mandatory' });
+          return;
+        }
+
+        const price = await retry(GetPriceFromCoinGecko, [coingeckoChainId, address], 3);
+
+        console.log(`found price ${price} for address ${address} on chain ${coingeckoChainId}`);
+        lastCoingeckoCall = Date.now();
+        priceResponse = {
+          priceUSD: price,
+          source: 'coingecko'
+        };
+        break;
+      }
+      default:
+        throw new Error(`Unknown network ${network}`);
+    }
+
+    // only cache if price != 0
+    if (priceResponse.priceUSD != 0) {
+      if (!priceCache[network]) {
+        priceCache[network] = {};
+      }
+
+      priceCache[network][address] = {
+        cacheDate: Date.now(),
+        priceResponse: priceResponse
+      };
+    }
+  } else {
+    console.log(`Returning cache price for network ${network} and token ${address}`);
+  }
+  return priceCache[network][address].priceResponse;
+}
 
 async function GetPriceFromKyber(tokenAddress: string): Promise<number> {
   const krystalApiCall = `https://pricing-prod.krystal.team/v1/market?addresses=${tokenAddress}&chain=ethereum@1&sparkline=false`;
