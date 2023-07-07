@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { retry, sleep } from '../utils/Utils';
-import { IPriceCache, IPriceResponse, coinGeckoChainIdMap } from '../models/PriceModels';
+import { ICachedData, IPriceCache, IPriceResponse, coinGeckoChainIdMap } from '../models/PriceModels';
 import axios from 'axios';
 import { Mutex } from 'async-mutex';
 export const priceController = express.Router();
@@ -14,8 +14,79 @@ const getPriceMutex = new Mutex();
 
 const priceCache: IPriceCache = {};
 
+const simplePriceCache: { [currency: string]: ICachedData } = {};
+
 priceController.get('/availablenetworks', (req: Request, res: Response) => {
   res.json(['eth', 'cro', 'near', 'bsc', 'matic', 'avax', 'optimistic-ethereum']);
+});
+
+priceController.get('/simple', async (req: Request, res: Response) => {
+  const currency = req.query.currency;
+
+  if (!currency) {
+    res.status(400).json({ error: 'currency query param mandatory' });
+    return;
+  }
+
+  try {
+    const currencyKey = currency.toString().toLowerCase();
+
+    const price: IPriceResponse | void = await getPriceMutex.runExclusive(async () => {
+      if (req.closed) {
+        return;
+      }
+
+      if (
+        !simplePriceCache[currencyKey] ||
+        simplePriceCache[currencyKey].cacheDate < Date.now() - PRICE_CACHE_DURATION
+      ) {
+        // get the price from coingecko simple price api
+        const msToWait = WAIT_TIME_BETWEEN_CALLS_COINGECKO - (Date.now() - lastCoingeckoCall);
+        if (msToWait > 0) {
+          console.log(`waiting ${msToWait} ms before calling coingecko`);
+          await sleep(msToWait);
+        }
+        const price = await retry(GetSimplePriceFromCoinGecko, [currencyKey], 3);
+
+        console.log(`found price ${price} for currency ${currencyKey}`);
+        lastCoingeckoCall = Date.now();
+        const priceResponse = {
+          priceUSD: price,
+          source: 'coingecko'
+        };
+
+        if (priceResponse.priceUSD != 0) {
+          simplePriceCache[currencyKey] = {
+            cacheDate: Date.now(),
+            priceResponse: priceResponse
+          };
+        }
+      } else {
+        const cacheExpiresIn = PRICE_CACHE_DURATION - (Date.now() - simplePriceCache[currencyKey].cacheDate);
+        console.log(
+          `Returning cached price for ${currencyKey} : ${simplePriceCache[currencyKey].priceResponse.priceUSD}` +
+            ` Cache expires in ${cacheExpiresIn / 1000} seconds`
+        );
+      }
+
+      return simplePriceCache[currencyKey].priceResponse;
+    });
+
+    if (req.closed) {
+      console.log('ending request because closed');
+      res.json({ msg: 'request closed' });
+      return;
+    }
+
+    if (!price) {
+      throw new Error('Unknown price error');
+    }
+
+    res.json(price);
+  } catch (e) {
+    console.log('exception', e);
+    res.status(503).json({ error: 'something went wrong', exception: e });
+  }
 });
 
 priceController.get('/', async (req: Request, res: Response) => {
@@ -130,8 +201,10 @@ async function getCachedPrice(network: string, address: string, res: Response): 
       };
     }
   } else {
+    const cacheExpiresIn = PRICE_CACHE_DURATION - (Date.now() - priceCache[network][address].cacheDate);
     console.log(
-      `Returning cached price for network ${network} and token ${address}: ${priceCache[network][address].priceResponse}`
+      `Returning cached price for network ${network} and token ${address}: ${priceCache[network][address].priceResponse.priceUSD}` +
+        ` Cache expires in ${cacheExpiresIn / 1000} seconds`
     );
   }
   return priceCache[network][address].priceResponse;
@@ -156,5 +229,16 @@ async function GetPriceFromCoinGecko(coingeckoChainId: string, tokenAddress: str
     return 0;
   } else {
     return Number(coingeckoResponse.data[tokenAddress].usd);
+  }
+}
+
+async function GetSimplePriceFromCoinGecko(currency: string): Promise<number> {
+  const coinGeckoApiCall = `https://api.coingecko.com/api/v3/simple/price?ids=${currency}&vs_currencies=USD`;
+  const coingeckoResponse = await axios.get(coinGeckoApiCall);
+  if (Object.keys(coingeckoResponse.data).length == 0 || !coingeckoResponse.data[currency].usd) {
+    console.log(`Could not find coingecko price for ${currency}`);
+    return 0;
+  } else {
+    return Number(coingeckoResponse.data[currency].usd);
   }
 }
