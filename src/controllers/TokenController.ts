@@ -12,7 +12,8 @@ const web3ProviderMapping = {
   cro: new ethers.JsonRpcProvider(process.env.RPC_URL_CRONOS),
   bsc: new ethers.JsonRpcProvider(process.env.RPC_URL_BSC),
   matic: new ethers.JsonRpcProvider(process.env.RPC_URL_MATIC),
-  gnosis: new ethers.JsonRpcProvider(process.env.RPC_URL_GNOSIS)
+  gnosis: new ethers.JsonRpcProvider(process.env.RPC_URL_GNOSIS),
+  optimism: new ethers.JsonRpcProvider(process.env.RPC_URL_OPTIMISM)
 };
 
 interface NetworkInfoCache {
@@ -74,6 +75,17 @@ tokenController.get('/infos', async (req: Request, res: Response) => {
     }
 
     const tokenAddressKey = tokenAddress.toString().toLowerCase();
+
+    if (tokenAddressKey == '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
+      const ethInfos: TokenInfos = {
+        address: tokenAddressKey,
+        decimals: 18,
+        name: 'Ether',
+        symbol: 'ETH'
+      };
+      res.json(ethInfos);
+      return;
+    }
 
     const web3Provider = web3ProviderMapping[networkKey as keyof typeof web3ProviderMapping];
     if (!web3Provider) {

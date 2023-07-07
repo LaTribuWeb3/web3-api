@@ -4,7 +4,8 @@ export const coinGeckoChainIdMap: { [network: string]: string } = {
   matic: 'polygon-pos',
   bsc: 'binance-smart-chain',
   near: 'aurora',
-  cro: 'cronos'
+  cro: 'cronos',
+  optimism: 'optimistic-ethereum'
 };
 
 export interface IPriceResponse {

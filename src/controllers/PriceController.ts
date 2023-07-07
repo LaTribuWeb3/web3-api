@@ -15,7 +15,7 @@ const getPriceMutex = new Mutex();
 const priceCache: IPriceCache = {};
 
 priceController.get('/availablenetworks', (req: Request, res: Response) => {
-  res.json(['eth', 'cro', 'near', 'bsc', 'matic', 'avax']);
+  res.json(['eth', 'cro', 'near', 'bsc', 'matic', 'avax', 'optimistic-ethereum']);
 });
 
 priceController.get('/', async (req: Request, res: Response) => {
@@ -90,7 +90,8 @@ async function getCachedPrice(network: string, address: string, res: Response): 
       case 'near':
       case 'bsc':
       case 'matic':
-      case 'avax': {
+      case 'avax':
+      case 'optimism': {
         // call coingecko
         const msToWait = WAIT_TIME_BETWEEN_CALLS_COINGECKO - (Date.now() - lastCoingeckoCall);
         if (msToWait > 0) {
