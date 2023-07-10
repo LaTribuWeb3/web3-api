@@ -13,7 +13,8 @@ const web3ProviderMapping = {
   bsc: new ethers.JsonRpcProvider(process.env.RPC_URL_BSC),
   matic: new ethers.JsonRpcProvider(process.env.RPC_URL_MATIC),
   gnosis: new ethers.JsonRpcProvider(process.env.RPC_URL_GNOSIS),
-  optimism: new ethers.JsonRpcProvider(process.env.RPC_URL_OPTIMISM)
+  optimism: new ethers.JsonRpcProvider(process.env.RPC_URL_OPTIMISM),
+  near: new ethers.JsonRpcProvider(process.env.RPC_URL_NEAR)
 };
 
 interface NetworkInfoCache {
