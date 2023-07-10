@@ -190,16 +190,14 @@ async function getCachedPrice(network: string, address: string, res: Response): 
     }
 
     // only cache if price != 0
-    if (priceResponse.priceUSD != 0) {
-      if (!priceCache[network]) {
-        priceCache[network] = {};
-      }
-
-      priceCache[network][address] = {
-        cacheDate: Date.now(),
-        priceResponse: priceResponse
-      };
+    if (!priceCache[network]) {
+      priceCache[network] = {};
     }
+
+    priceCache[network][address] = {
+      cacheDate: Date.now(),
+      priceResponse: priceResponse
+    };
   } else {
     const cacheExpiresIn = PRICE_CACHE_DURATION - (Date.now() - priceCache[network][address].cacheDate);
     console.log(
