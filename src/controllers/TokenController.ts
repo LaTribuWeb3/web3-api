@@ -14,7 +14,8 @@ const web3ProviderMapping = {
   matic: new ethers.JsonRpcProvider(process.env.RPC_URL_MATIC),
   gnosis: new ethers.JsonRpcProvider(process.env.RPC_URL_GNOSIS),
   optimism: new ethers.JsonRpcProvider(process.env.RPC_URL_OPTIMISM),
-  near: new ethers.JsonRpcProvider(process.env.RPC_URL_NEAR)
+  near: new ethers.JsonRpcProvider(process.env.RPC_URL_NEAR),
+  moonbeam: new ethers.JsonRpcProvider(process.env.RPC_URL_MOONBEAM),
 };
 
 interface NetworkInfoCache {
