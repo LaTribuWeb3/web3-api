@@ -8,6 +8,10 @@ export const coinGeckoChainIdMap: { [network: string]: string } = {
   optimism: 'optimistic-ethereum'
 };
 
+export const defillamaChaindIdMap: { [network: string]: string } = {
+  cro: 'cronos'
+};
+
 export interface IPriceResponse {
   priceUSD: number;
   source: string;
