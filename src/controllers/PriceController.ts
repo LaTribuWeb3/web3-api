@@ -1,16 +1,36 @@
 import express, { Request, Response } from 'express';
 import { retry, sleep } from '../utils/Utils';
-import { ICachedData, IPriceCache, IPriceResponse, coinGeckoChainIdMap } from '../models/PriceModels';
+import {
+  ICachedData,
+  IPriceCache,
+  IPriceResponse,
+  coinGeckoChainIdMap,
+  defillamaChaindIdMap
+} from '../models/PriceModels';
 import axios from 'axios';
 import { Mutex } from 'async-mutex';
 export const priceController = express.Router();
 const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 min price cache
 const WAIT_TIME_BETWEEN_CALLS_KYBER = 2 * 1000; // 2 seconds between each calls
 const WAIT_TIME_BETWEEN_CALLS_COINGECKO = 6 * 1000; // 6 seconds between each calls
+const WAIT_TIME_BETWEEN_CALLS_DEFILLAMA = 1 * 1000; // 6 seconds between each calls
 let lastCoingeckoCall = 0;
 let lastKyberCall = 0;
+let lastDefillamaCall = 0;
+const priceMutexCoingecko = new Mutex();
+const priceMutexKyber = new Mutex();
+const priceMutexDefillama = new Mutex();
 
-const getPriceMutex = new Mutex();
+function getPriceMutex(network: string) {
+  switch (network.toLowerCase()) {
+    case 'eth':
+      return priceMutexKyber;
+    case 'cro':
+      return priceMutexDefillama;
+    default:
+      return priceMutexCoingecko;
+  }
+}
 
 const priceCache: IPriceCache = {};
 
@@ -31,7 +51,7 @@ priceController.get('/simple', async (req: Request, res: Response) => {
   try {
     const currencyKey = currency.toString().toLowerCase();
 
-    const price: IPriceResponse | void = await getPriceMutex.runExclusive(async () => {
+    const price: IPriceResponse | void = await priceMutexCoingecko.runExclusive(async () => {
       if (req.closed) {
         return;
       }
@@ -107,7 +127,7 @@ priceController.get('/', async (req: Request, res: Response) => {
     const networkKey = network.toString().toLowerCase();
     const tokenAddressKey = tokenAddress.toString().toLowerCase();
 
-    const price = await getPriceMutex.runExclusive(async () => {
+    const price = await getPriceMutex(networkKey).runExclusive(async () => {
       if (req.closed) {
         return;
       }
@@ -157,7 +177,30 @@ async function getCachedPrice(network: string, address: string, res: Response): 
         };
         break;
       }
-      case 'cro':
+      case 'cro': {
+        // call defillama
+        const msToWait = WAIT_TIME_BETWEEN_CALLS_DEFILLAMA - (Date.now() - lastDefillamaCall);
+        if (msToWait > 0) {
+          console.log(`waiting ${msToWait} ms before calling defillama`);
+          await sleep(msToWait);
+        }
+
+        const defillamaChainId = defillamaChaindIdMap[network];
+        if (!defillamaChainId) {
+          res.status(400).json({ error: `network unknown ${network}` });
+          return;
+        }
+
+        const price = await retry(GetPriceFromDefillama, [defillamaChainId, address], 3);
+
+        console.log(`found price ${price} for address ${address} on chain ${defillamaChainId}`);
+        lastDefillamaCall = Date.now();
+        priceResponse = {
+          priceUSD: price,
+          source: 'defillama'
+        };
+        break;
+      }
       case 'near':
       case 'bsc':
       case 'matic':
@@ -171,7 +214,7 @@ async function getCachedPrice(network: string, address: string, res: Response): 
         }
         const coingeckoChainId = coinGeckoChainIdMap[network];
         if (!coingeckoChainId) {
-          res.status(400).json({ error: 'amountIn query param mandatory' });
+          res.status(400).json({ error: `network unknown ${network}` });
           return;
         }
 
@@ -216,6 +259,22 @@ async function GetPriceFromKyber(tokenAddress: string): Promise<number> {
     return 0;
   } else {
     return Number(krystalResponse.data.marketData[0].price);
+  }
+}
+
+async function GetPriceFromDefillama(network: string, tokenAddress: string): Promise<number> {
+  const coinllamaUrl = `https://coins.llama.fi/prices/current/${network}:${tokenAddress}`;
+  const coinllamaResponse = await axios.get(coinllamaUrl);
+  if (
+    !coinllamaResponse.data ||
+    !coinllamaResponse.data.coins ||
+    !coinllamaResponse.data.coins[`${network}:${tokenAddress}`] ||
+    !coinllamaResponse.data.coins[`${network}:${tokenAddress}`].price
+  ) {
+    console.log(`Could not find coinllama price for ${network}:${tokenAddress}`);
+    return 0;
+  } else {
+    return Number(coinllamaResponse.data.coins[`${network}:${tokenAddress}`].price);
   }
 }
 
