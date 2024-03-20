@@ -9,6 +9,7 @@ export const coinGeckoChainIdMap: { [network: string]: string } = {
 };
 
 export const defillamaChaindIdMap: { [network: string]: string } = {
+  eth: 'ethereum',
   cro: 'cronos'
 };
 

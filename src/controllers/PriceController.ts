@@ -11,20 +11,16 @@ import axios from 'axios';
 import { Mutex } from 'async-mutex';
 export const priceController = express.Router();
 const PRICE_CACHE_DURATION = 5 * 60 * 1000; // 5 min price cache
-const WAIT_TIME_BETWEEN_CALLS_KYBER = 2 * 1000; // 2 seconds between each calls
 const WAIT_TIME_BETWEEN_CALLS_COINGECKO = 6 * 1000; // 6 seconds between each calls
-const WAIT_TIME_BETWEEN_CALLS_DEFILLAMA = 1 * 1000; // 6 seconds between each calls
+const WAIT_TIME_BETWEEN_CALLS_DEFILLAMA = 1 * 1000; // 1 seconds between each calls
 let lastCoingeckoCall = 0;
-let lastKyberCall = 0;
 let lastDefillamaCall = 0;
 const priceMutexCoingecko = new Mutex();
-const priceMutexKyber = new Mutex();
 const priceMutexDefillama = new Mutex();
 
 function getPriceMutex(network: string) {
   switch (network.toLowerCase()) {
     case 'eth':
-      return priceMutexKyber;
     case 'cro':
       return priceMutexDefillama;
     default:
@@ -40,6 +36,7 @@ priceController.get('/availablenetworks', (req: Request, res: Response) => {
   res.json(['eth', 'cro', 'near', 'bsc', 'matic', 'avax', 'optimistic-ethereum']);
 });
 
+// this one just call coingecko
 priceController.get('/simple', async (req: Request, res: Response) => {
   const currency = req.query.currency;
 
@@ -161,22 +158,7 @@ async function getCachedPrice(network: string, address: string, res: Response): 
     let priceResponse: IPriceResponse | undefined = undefined;
 
     switch (network) {
-      case 'eth': {
-        const msToWait = WAIT_TIME_BETWEEN_CALLS_KYBER - (Date.now() - lastKyberCall);
-        if (msToWait > 0) {
-          console.log(`waiting ${msToWait} ms before calling kyber`);
-          await sleep(msToWait);
-        }
-        // call kyber
-        const price = await retry(GetPriceFromKyber, [address], 3);
-        console.log(`found price ${price} for address ${address} from kyber`);
-        lastKyberCall = Date.now();
-        priceResponse = {
-          priceUSD: price,
-          source: 'kyberkrystal'
-        };
-        break;
-      }
+      case 'eth':
       case 'cro': {
         // call defillama
         const msToWait = WAIT_TIME_BETWEEN_CALLS_DEFILLAMA - (Date.now() - lastDefillamaCall);
@@ -249,17 +231,6 @@ async function getCachedPrice(network: string, address: string, res: Response): 
     );
   }
   return priceCache[network][address].priceResponse;
-}
-
-async function GetPriceFromKyber(tokenAddress: string): Promise<number> {
-  const krystalApiCall = `https://pricing-prod.krystal.team/v1/market?addresses=${tokenAddress}&chain=ethereum@1&sparkline=false`;
-  const krystalResponse = await axios.get(krystalApiCall);
-  if (krystalResponse.data.marketData.length == 0 || !krystalResponse.data.marketData[0].price) {
-    console.log(`Could not find kyber price for ${tokenAddress}`);
-    return 0;
-  } else {
-    return Number(krystalResponse.data.marketData[0].price);
-  }
 }
 
 async function GetPriceFromDefillama(network: string, tokenAddress: string): Promise<number> {
