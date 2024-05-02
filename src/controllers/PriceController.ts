@@ -21,6 +21,7 @@ const priceMutexDefillama = new Mutex();
 function getPriceMutex(network: string) {
   switch (network.toLowerCase()) {
     case 'eth':
+    case 'mode':
     case 'cro':
       return priceMutexDefillama;
     default:
@@ -159,7 +160,8 @@ async function getCachedPrice(network: string, address: string, res: Response): 
 
     switch (network) {
       case 'eth':
-      case 'cro': {
+      case 'cro':
+      case 'mode': {
         // call defillama
         const msToWait = WAIT_TIME_BETWEEN_CALLS_DEFILLAMA - (Date.now() - lastDefillamaCall);
         if (msToWait > 0) {

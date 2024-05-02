@@ -17,7 +17,8 @@ const web3ProviderMapping = {
   near: new ethers.JsonRpcProvider(process.env.RPC_URL_NEAR),
   moonbeam: new ethers.JsonRpcProvider(process.env.RPC_URL_MOONBEAM),
   ftm: new ethers.JsonRpcProvider(process.env.RPC_URL_FANTOM),
-  goerli: new ethers.JsonRpcProvider(process.env.RPC_URL_GOERLI)
+  goerli: new ethers.JsonRpcProvider(process.env.RPC_URL_GOERLI),
+  mode: new ethers.JsonRpcProvider(process.env.RPC_URL_MODE)
 };
 
 interface NetworkInfoCache {
