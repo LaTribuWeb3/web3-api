@@ -161,6 +161,7 @@ async function getCachedPrice(network: string, address: string, res: Response): 
     switch (network) {
       case 'eth':
       case 'cro':
+      case 'bsc':
       case 'mode': {
         // call defillama
         const msToWait = WAIT_TIME_BETWEEN_CALLS_DEFILLAMA - (Date.now() - lastDefillamaCall);
@@ -169,7 +170,7 @@ async function getCachedPrice(network: string, address: string, res: Response): 
           await sleep(msToWait);
         }
 
-        const defillamaChainId = defillamaChaindIdMap[network];
+        const defillamaChainId = defillamaChaindIdMap[network.toLowerCase()];
         if (!defillamaChainId) {
           res.status(400).json({ error: `network unknown ${network}` });
           return;
@@ -186,7 +187,6 @@ async function getCachedPrice(network: string, address: string, res: Response): 
         break;
       }
       case 'near':
-      case 'bsc':
       case 'matic':
       case 'avax':
       case 'optimism': {

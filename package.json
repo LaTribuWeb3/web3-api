@@ -3,7 +3,8 @@
     "version": "1.0.0",
     "main": "Api.ts",
     "scripts": {
-        "start": "npx nodemon",
+        "start": "node -r ts-node/register ./src/Api.ts",
+        "debug": "node --inspect -r ts-node/register ./src/Api.ts",
         "build": "rimraf ./build && tsc",
         "lint": "eslint . --ext .ts",
         "lintfix": "eslint . --ext .ts --fix",
