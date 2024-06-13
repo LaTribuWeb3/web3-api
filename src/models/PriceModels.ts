@@ -5,7 +5,8 @@ export const coinGeckoChainIdMap: { [network: string]: string } = {
   bsc: 'binance-smart-chain',
   near: 'aurora',
   cro: 'cronos',
-  optimism: 'optimistic-ethereum'
+  optimism: 'optimistic-ethereum',
+  ftm: 'fantom'
 };
 
 export const defillamaChaindIdMap: { [network: string]: string } = {

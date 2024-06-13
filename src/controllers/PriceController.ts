@@ -189,7 +189,8 @@ async function getCachedPrice(network: string, address: string, res: Response): 
       case 'near':
       case 'matic':
       case 'avax':
-      case 'optimism': {
+      case 'optimism':
+      case 'ftm': {
         // call coingecko
         const msToWait = WAIT_TIME_BETWEEN_CALLS_COINGECKO - (Date.now() - lastCoingeckoCall);
         if (msToWait > 0) {
